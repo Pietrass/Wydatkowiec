@@ -32,9 +32,45 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
+    <CheckBox
+        android:id="@+id/checkbox_zalegly"
+        android:text="Zaległy wydatek"
+        android:layout_below="@+id/opis"
+        android:layout_margin="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:id="@+id/linear_layout_zalegly_wydatek"
+        android:layout_below="@+id/checkbox_zalegly"
+        android:layout_margin="10dp"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/data_zaleglego_wydatku"
+            android:text="Data"
+            android:layout_weight="1"
+            android:layout_marginLeft="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/button_ustaw_date"
+            android:layout_weight="1.5"
+            android:background="@color/colorPrimary"
+            android:minHeight="35dp"
+            android:minWidth="35dp"
+            android:text="Ustaw datę"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
     <Button
         android:id="@+id/odlicz_button"
-        android:layout_below="@+id/opis"
+        android:layout_below="@+id/linear_layout_zalegly_wydatek"
         android:text="Dodaj"
         android:layout_centerInParent="true"
         android:background="#ff9900"

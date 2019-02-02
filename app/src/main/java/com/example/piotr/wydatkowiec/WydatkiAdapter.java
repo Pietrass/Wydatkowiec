@@ -48,9 +48,9 @@ public class WydatkiAdapter extends RecyclerView.Adapter<WydatkiAdapter.MyViewHo
             opis = view.findViewById(R.id.item_opis);
             data = view.findViewById(R.id.item_data);
 
-            view.setOnLongClickListener(new View.OnLongClickListener() {
+            view.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public boolean onLongClick(View v) {
+                public void onClick(View v) {
                     PopupMenu popupMenu = new PopupMenu(context, view);
                     MenuInflater inflater = popupMenu.getMenuInflater();
                     inflater.inflate(R.menu.item_menu, popupMenu.getMenu());
@@ -69,7 +69,6 @@ public class WydatkiAdapter extends RecyclerView.Adapter<WydatkiAdapter.MyViewHo
                         }
                     });
                     popupMenu.show();
-                    return false;
                 }
             });
         }

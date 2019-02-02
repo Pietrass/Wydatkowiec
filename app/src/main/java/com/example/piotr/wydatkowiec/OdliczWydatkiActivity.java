@@ -1,9 +1,14 @@
 package com.example.piotr.wydatkowiec;
 
+import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -13,12 +18,18 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 public class OdliczWydatkiActivity extends AppCompatActivity {
@@ -31,9 +42,18 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
     EditText kwota, opisEditText;
     Button odlicz;
 
-    Calendar poprzedniaData;
+    // zalegly wydatek vars
+
+    LinearLayout linearLayoutZaleglyWydatek;
+    static TextView zaleglaData;
+    CheckBox zaleglyWydatek;
+    Button ustawDate;
+    static Calendar cZaleglaData;
+
+    static String poprzedniMiesiac;
 
     DatabaseHelper db;
+    public static NumberFormat numberFormat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,11 +62,12 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
 
         appContext = this;
 
+        numberFormat = new DecimalFormat("#0.00");
+        wydaneTextView = findViewById(R.id.wydane);
+
         getWydane();
         checkMonth();
 
-        wydaneTextView = findViewById(R.id.wydane);
-        final NumberFormat numberFormat = new DecimalFormat("#0.00");
         wydaneTextView.setText("Wydane: " + numberFormat.format(wydane));
 
         kwota = findViewById(R.id.do_odliczenia);
@@ -77,13 +98,56 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
             }
         });
 
+        // zaległy wydatek
+
+        linearLayoutZaleglyWydatek = findViewById(R.id.linear_layout_zalegly_wydatek);
+        zaleglyWydatek = findViewById(R.id.checkbox_zalegly);
+        zaleglaData = findViewById(R.id.data_zaleglego_wydatku);
+        ustawDate = findViewById(R.id.button_ustaw_date);
+
+        Calendar aktualnaData = Calendar.getInstance();
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd.MM.yyyy");
+        zaleglaData.setText(simpleDateFormat.format(aktualnaData.getTime()));
+
+        zaleglyWydatek.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (zaleglyWydatek.isChecked()) {
+                    linearLayoutZaleglyWydatek.setVisibility(View.VISIBLE);
+                } else {
+                    linearLayoutZaleglyWydatek.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        zaleglyWydatek.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                inputMethodManager.hideSoftInputFromWindow(wydaneTextView.getWindowToken(), 0);
+
+            }
+        });
+
+        ustawDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DialogFragment fragment = new DateFragment();
+                fragment.show(getSupportFragmentManager(), "datePicker");
+            }
+        });
+
         odlicz.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 float doOdliczenia = Float.valueOf(kwota.getText().toString());
                 String opis = opisEditText.getText().toString();
                 wydane += doOdliczenia;
-                db.insertWydatek(doOdliczenia, opis, Calendar.getInstance());
+                if (zaleglyWydatek.isChecked()) {
+                    db.insertWydatek(doOdliczenia, opis, cZaleglaData);
+                } else {
+                    db.insertWydatek(doOdliczenia, opis, Calendar.getInstance());
+                }
                 saveWydane();
                 wydaneTextView.setText("Wydane: " + numberFormat.format(wydane));
                 kwota.setText("");
@@ -95,13 +159,18 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
 
     private void checkMonth() {
         Calendar aktualnaData = Calendar.getInstance();
-        if (poprzedniaData != null) {
-            if (poprzedniaData.get(Calendar.MONTH) != aktualnaData.get(Calendar.MONTH)) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM");
+        String aktualnyMiesiac = simpleDateFormat.format(aktualnaData.getTime());
+        if (poprzedniMiesiac != null) {
+            if (poprzedniMiesiac != aktualnyMiesiac) {
                 wydane = 0;
-                poprzedniaData = aktualnaData;
+                wydaneTextView.setText("Wydane: " + numberFormat.format(wydane));
+                poprzedniMiesiac = aktualnyMiesiac;
+                saveWydane();
+
             }
         } else {
-            poprzedniaData = aktualnaData;
+            poprzedniMiesiac = aktualnyMiesiac;
         }
     }
 
@@ -109,12 +178,14 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(appContext);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putFloat("wydane", wydane);
+        editor.putString("poprzedniMiesiac", poprzedniMiesiac);
         editor.commit();
     }
 
     public void getWydane() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(appContext);
         wydane = sharedPreferences.getFloat("wydane", 0);
+        poprzedniMiesiac = sharedPreferences.getString("poprzedniMiesiac", null);
     }
 
     @Override
@@ -133,4 +204,27 @@ public class OdliczWydatkiActivity extends AppCompatActivity {
 
         return true;
     }
+
+    public static class DateFragment extends DialogFragment implements DatePickerDialog.OnDateSetListener {
+
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+            final Calendar aktualnaData = Calendar.getInstance();
+            int year = aktualnaData.get(Calendar.YEAR);
+            int month = aktualnaData.get(Calendar.MONTH);
+            int day = aktualnaData.get(Calendar.DATE);
+            return new DatePickerDialog(getActivity(), this, year, month, day);
+        }
+
+        @Override
+        public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+            cZaleglaData = Calendar.getInstance();
+            cZaleglaData.set(year, month, dayOfMonth);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd.MM.yyyy");
+            zaleglaData.setText(simpleDateFormat.format(cZaleglaData.getTime()));
+        }
+    }
 }
+
+

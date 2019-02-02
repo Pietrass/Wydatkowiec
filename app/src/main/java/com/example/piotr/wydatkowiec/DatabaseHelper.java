@@ -5,10 +5,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+
+import static com.example.piotr.wydatkowiec.HistoriaWydatkow.suma;
+import static com.example.piotr.wydatkowiec.SpinnerListener.currentIndSelected;
+import static com.example.piotr.wydatkowiec.SpinnerYearsListener.currentYearSelected;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -70,12 +75,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public ArrayList<Wydatek> getWydatki() {
         ArrayList<Wydatek> wydatki = new ArrayList<>();
-
         String selectQuery = "SELECT * FROM " + TABLE_NAME + " ORDER BY " + DATA + " " + " DESC";
-
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
-
         if (cursor.moveToFirst()) {
             do {
                 float kwota = cursor.getFloat(cursor.getColumnIndex(KWOTA));
@@ -83,13 +85,39 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 String data = cursor.getString(cursor.getColumnIndex(DATA));
                 long idDb = cursor.getLong(cursor.getColumnIndex(ID));
                 Wydatek wydatek = new Wydatek(kwota, opis, data, idDb);
-
+                suma += kwota;
                 wydatki.add(wydatek);
             } while (cursor.moveToNext());
         }
-
         db.close();
+        return wydatki;
+    }
 
+    public ArrayList<Wydatek> getWydatkiFromSelectedMonth() {
+        ArrayList<Wydatek> wydatki = new ArrayList<>();
+        String monthFormatted = String.format("%02d", currentIndSelected);
+        String year = currentYearSelected;
+        String selectQuery;
+        if (currentIndSelected == 0) {
+            selectQuery = "SELECT * FROM " + TABLE_NAME + " WHERE strftime('%Y', data) = '" + year +"'";
+        } else {
+            selectQuery = "SELECT * FROM " + TABLE_NAME + " WHERE strftime('%m', data) = '" + monthFormatted + "' AND " +
+                    "strftime('%Y', data) = '" + year + "'";
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        if (cursor.moveToFirst()) {
+            do {
+                float kwota = cursor.getFloat(cursor.getColumnIndex(KWOTA));
+                String opis = cursor.getString(cursor.getColumnIndex(OPIS));
+                String data = cursor.getString(cursor.getColumnIndex(DATA));
+                long idDb = cursor.getLong(cursor.getColumnIndex(ID));
+                Wydatek wydatek = new Wydatek(kwota, opis, data, idDb);
+                suma += kwota;
+                wydatki.add(wydatek);
+            } while (cursor.moveToNext());
+        }
+        db.close();
         return wydatki;
     }
 
